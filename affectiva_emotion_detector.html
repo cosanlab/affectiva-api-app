@@ -1,0 +1,144 @@
+
+<!DOCTYPE html> 
+<html>
+<!-- Load jquery -->
+<script type="text/javascript" src="jquery-3.1.0.slim.js"></script>
+<!-- Load FileSaver to auto download json file. -->
+<script type="text/javascript" src="FileSaver.min.js"></script>
+<!-- Load Affectiva API -->
+<script type="text/javascript" src="https://download.affectiva.com/js/3.2/affdex.js">
+
+</script>
+<!-- Load style CSS from Affectiva demo  -->
+<style type="text/css"></style>
+
+<body>
+This script is intended to read a video file, 
+extract facial expression using the Affecitva javascript API,
+then save the outputs to a json file. 
+
+This code uses the PhotoDetector which can provide different results from the FrameDetector.
+
+First initialize the detector. 
+When initialization successful, loop through every second of video. 
+Extract image, then submit to processing. 
+On procesing success, append result to json variable. 
+At the end of loop, download to computer.
+<p></p>
+<div>
+  <strong>DETECTOR LOG MSGS</strong>
+</div>
+<div id="logs"></div>
+
+</body>
+
+<!-- Javascript Code -->
+<script type="text/javascript">
+  // Section to set variables such as file name, server address etc.
+  var filename = 's31_ra_ep01_720.MP4';
+  var secs = 0;
+  var detection_results=[]; // for logging all detection results. 
+  var faceMode = affdex.FaceDetectorMode.LARGE_FACES;
+  var detector = new affdex.PhotoDetector(faceMode);
+  // var detector = new affdex.FrameDetector(faceMode);
+  //Enable detection of all Expressions, Emotions and Emojis classifiers.
+  detector.detectAllEmotions();
+  detector.detectAllExpressions();
+  // detector.detectAllEmojis();
+  // detector.detectAllAppearance();
+
+  // Get video duration to be global variable;
+  var me = this, video = document.createElement('video');
+  video.src = filename;
+  var duration;
+  video.onloadedmetadata = function() {
+    duration = this.duration;
+    log("#logs","Duration has been loaded")
+  };
+
+  // begin detector
+  log("#logs","Initializing detector...");
+  detector.start(); 
+
+  //Add a callback to notify when the detector is initialized and ready for runing.
+  detector.addEventListener("onInitializeSuccess", function() {
+    log("#logs","The detector reports initialized");
+    getVideoImage(secs);
+  });
+
+// Up to here what I used to do . 
+function getVideoImage(secs) {
+  // console.log("grabbing image");
+  // var me = this, video = document.createElement('video');
+  // video.onloadedmetadata = function() {
+  //   // console.log("meta data");
+  //   if ('function' === typeof secs) {
+  //     secs = secs(this.duration);
+  //   }
+  //   this.currentTime = Math.min(Math.max(0, (secs < 0 ? this.duration : 0) + secs), this.duration);
+  // };
+  video.currentTime = Math.min(Math.max(0, (secs < 0 ? video.duration : 0) + secs), video.duration);
+  video.onseeked = function(e) {
+    // console.log("seeking")
+    var canvas = document.createElement('canvas');
+    canvas.height = canvas.height ;
+    canvas.width = canvas.width;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    var img = new Image();
+    img.src = canvas.toDataURL();
+    // Pass the image to the detector to track emotions
+    if (detector && detector.isRunning) {
+      log("#logs","Submitted second : ".concat(secs.toString()));
+      detector.process(ctx.getImageData(0, 0, canvas.width, canvas.height), secs);
+    };
+    // callback.call(me, img, this.currentTime, e);
+  };
+  video.onerror = function(e) {
+    console.log("Video Seeking Error");
+    // callback.call(me, undefined, undefined, e);
+  };
+  // video.src = filename;
+};
+
+detector.addEventListener("onImageResultsSuccess", function(faces, image, timestamp) {
+  // drawImage(image);
+  $('#results').html("");
+  var time_key = "Timestamp";
+  var time_val = timestamp;
+  console.log('#results', "Timestamp: " + timestamp.toFixed(2));
+  console.log('#results', "Number of faces found: " + faces.length);
+  if (faces.length > 0) {
+    // console.log("Appending Data");
+    // Append timestamp 
+    faces[0].emotions[time_key] = time_val;
+    // console.log("Stringify data");
+    // Save both emotions and expressions
+    var json = JSON.stringify(Object.assign({},faces[0].emotions,faces[0].expressions));
+    // console.log("push data");
+    detection_results.push(json);
+    console.log("pushed data");    
+  } else {
+    console.log('No Face, skipping entry');
+  };
+  if (duration >= secs) {
+    secs++;
+    getVideoImage(secs);
+  } else {
+    console.log("EndofDuration");
+    var blob = new Blob([detection_results], {type: "application/json"});
+    var saveAs = window.saveAs;
+    saveAs(blob, filename.split(".")[0].concat(".json")); 
+  }
+  ;
+
+});
+
+function log(node_name, msg) {
+  // Function from affectiva demo to write log on html page.
+  // First var is div name, second var message.
+  $(node_name).append("<span>" + msg + "</span><br />")
+}
+
+</script>
+</html>
