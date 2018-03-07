@@ -1,4 +1,4 @@
-/* Written by Jin Hyun Cheong */
+<!-- Written by Jin Hyun Cheong -->
 <!DOCTYPE html>
 <html>
 <!-- Load jquery -->
@@ -50,6 +50,9 @@ will download the data file automatically.
   // Decide whether your video has large or small face
   var faceMode = affdex.FaceDetectorMode.SMALL_FACES;
   // var faceMode = affdex.FaceDetectorMode.LARGE_FACES;
+
+  // How long to wait in milliseconds before each process-might not be needed?
+  var waitTime = 100;
 
   // Decide which detector to use photo or stream
   // var detector = new affdex.PhotoDetector(faceMode);
@@ -106,7 +109,9 @@ function getVideoImage(secs) {
     // Pass the image to the detector to track emotions
     if (detector && detector.isRunning) {
       log("#logs","Processing second : ".concat(precisionRound(secs,3).toString()));
+      setTimeout(function() {
       detector.process(ctx.getImageData(0, 0, canvas.width, canvas.height), secs);
+      },waitTime);
     };
   };
   video.onerror = function(e) {
