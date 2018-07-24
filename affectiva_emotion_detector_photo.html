@@ -1,0 +1,191 @@
+<!-- Written by Jin Hyun Cheong -->
+<!DOCTYPE html>
+<html>
+<!-- Load jquery -->
+<script type="text/javascript" src="jquery-3.1.0.slim.js"></script>
+<!-- Load FileSaver to auto download json file. -->
+<script type="text/javascript" src="FileSaver.min.js"></script>
+<!-- Load Affectiva API -->
+<script type="text/javascript" src="https://download.affectiva.com/js/3.2/affdex.js"></script>
+<!-- Load style CSS from Affectiva demo  -->
+<style type="text/css"></style>
+<body>
+<strong>Extracting emotions from video using Affectiva API</strong>
+<br><br>
+Use this script to extract facial expressions from a video file using
+the Affectiva javascript API.
+<br>
+When finished processing, your browser
+will download the data file automatically.
+<br><br>
+<input type="file" id="input" multiple onchange="loadFile(this.files)">
+<div>
+  <strong>DETECTOR LOG MSGS</strong>
+</div>
+<div id="logs"></div>
+</body>
+
+<!-- MODIFY THIS SECTION TO APPLY TO YOUR OWN FILES -->
+<script type="text/javascript">
+  /* Filename or path to your file.
+  This is relative to where you are running your server.
+  For example if I started my jupyter server in /Users/jcheong/affdex
+  then the file /Users/jcheong/affdes/data/sample_vid.mp4 can be
+  referenced as data/sample_vid.mp4
+  */
+  // filename ends in json
+  var filename = 'ck_photos.json';
+  var fileList;
+  var file;
+  // sec determines where in the image files you would like to begin detection
+  var secs = 0;
+
+  // sec_step determines the step size of extracting emotions in seconds
+  var sec_step = 1;
+
+  // stop_sec determines if you want to stop extraction at certain point of video
+  // comment this portion out if you want to run it for entire video.
+  // var stop_sec = 13;
+
+  // Set verbose = true to print images and detection succes, false if you don't want info
+  var verbose = false;
+
+  // Decide whether your video has large or small face
+  // var faceMode = affdex.FaceDetectorMode.SMALL_FACES;
+  var faceMode = affdex.FaceDetectorMode.LARGE_FACES;
+
+  // Decide which detector to use photo or stream
+  var detector = new affdex.PhotoDetector(faceMode);
+  // var detector = new affdex.FrameDetector(faceMode);
+
+  // Initialize Emotion and Expression detectors
+  detector.detectAllEmotions();
+  detector.detectAllExpressions();
+
+  // Init variable to save results
+  var fileNo = 0;
+  var clicks = 0;
+  var detection_results=[]; // for logging all detection results.
+  if (typeof stop_sec === 'undefined') {
+    stop_sec = Infinity
+  }
+
+  // // Get video duration and set as global variable;
+  // var me = this, video = document.createElement('video');
+  // video.src = filename;
+  var duration;
+  // // print success message when duration of video is loaded.
+  // video.onloadedmetadata = function() {
+  //   duration = this.duration;
+  //   log("#logs","Duration has been loaded for file: " + video.src )
+  // };
+
+  // Initialize detector
+  log("#logs","Initializing detector...");
+  detector.start();
+
+  //Add a callback to notify when the detector is initialized and ready for runing.
+  detector.addEventListener("onInitializeSuccess", function() {
+    log("#logs","The detector reports initialized");
+    // loadFile(secs);
+  });
+
+//Load the selected image
+function loadFile(event) {
+    $('#results').html("");
+    fileList = document.getElementById('input').files // Load list of files.
+    duration = fileList.length;
+    console.log(duration)
+    getNextImage(secs)
+  };
+
+// Load next image.
+function getNextImage(file_idx) {
+    // var fileList = document.getElementById('input').files
+    file = fileList[file_idx];
+    // console.log(file)
+    var img = new Image();
+    var reader = new FileReader();
+    reader.onload = function() {
+      img.onload = imageLoaded;
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+//Once the image is loaded, pass it down for processing
+function imageLoaded(event) {
+    var contxt = document.createElement('canvas').getContext('2d');
+    contxt.canvas.width = this.width;
+    contxt.canvas.height = this.height;
+    contxt.drawImage(this, 0, 0, this.width, this.height);
+    // Pass the image to the detector to track emotions
+    if (detector && detector.isRunning) {
+      detector.process(contxt.getImageData(0, 0, this.width, this.height), 0);
+    }
+  }
+
+detector.addEventListener("onImageResultsSuccess", function(faces, image, timestamp) {
+  // drawImage(image);
+  $('#results').html("");
+  var time_key = "Timestamp";
+  var time_val = timestamp;
+  var file_key = "FileName";
+  var file_val = file.name;
+  console.log('#results', "Timestamp: " + timestamp.toFixed(2));
+  console.log('#results', "Number of faces found: " + faces.length);
+  if (verbose) {
+  log("#logs","Number of faces found: " + faces.length);
+  }
+  if (faces.length > 0) {
+    clicks += 1;
+    // Append timestamp
+    faces[0].emotions[time_key] = time_val;
+    // Append filename
+    // console.log(file_val)
+    faces[0].emotions[file_key] = file_val;
+    // Save both emotions and expressions
+    var json = JSON.stringify(Object.assign({},faces[0].emotions,faces[0].expressions));
+    detection_results.push(json);
+  } else {
+    // If face is not detected skip entry.
+    console.log('Cannot find face, skipping entry');
+  };
+  if (duration-1 > secs) {
+    secs= secs + sec_step;
+    getNextImage(secs);
+// If data accumulated for more than 50,000 timepoints, save data, keep going
+    if (clicks == 50000) {
+      // save and download file
+      saveBlob(detection_results,fileNo);
+      // increment counter
+      fileNo +=1;
+      clicks = 0;
+      // reset detection results
+      detection_results=[];
+    }
+  } else {
+    console.log("EndofDuration");
+    saveBlob(detection_results,fileNo);
+  };
+});
+
+function saveBlob(results,fileNo) {
+var blob = new Blob([results], {type: "application/json"});
+var saveAs = window.saveAs;
+saveAs(blob, filename);
+}
+
+function log(node_name, msg) {
+  // Function from affectiva demo to write log on html page.
+  // First var is div name, second var message.
+  $(node_name).append("<span>" + msg + "</span><br />")
+}
+
+function precisionRound(number, precision) {
+  var factor = Math.pow(10, precision);
+  return Math.round(number * factor) / factor;
+}
+
+</script>
+</html>
