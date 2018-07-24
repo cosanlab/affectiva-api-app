@@ -38,7 +38,13 @@ Click on affectiva_emotion_detector.html and the processing will begin.
 
 6. When processing is finished, the browser will automatically download the results file in json format.
 
-
+7. Read in files
+An easy way to read in the json files using the following code.
+You need to add `lines=True` parameter or it will throw a trailing lines error.
+```
+import pandas as pd
+df = pd.read_json('~/Downloads/data_sample_vid.json',lines=True)
+```
 
 # ToDo's
 - Wrapper function / file grabber that can run the extraction for a list of video files.
