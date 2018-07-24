@@ -8,8 +8,24 @@ Clone or download the directory
 git clone https://github.com/cosanlab/affectiva-api-app.git
 ```
 
+# Directions for processing images using affectiva_emotion_detector_photo.html
+1. Double click the `affectiva_emotion_detector_photo.html` in Finder or File Browser
+which should launch a web browser such as Chrome or Firefox.
 
-# Directions
+2. Wait until you see the `dectector reports initialized` in the logs,
+and you will see a `Choose Files` button appear.
+
+3. Choose a file or files with the button. The images will be processed
+as soon as you click Open.
+
+4. Results of the detector will be combined into `output.json` file which will
+be automatically downloaded once processing is complete.
+
+5. You can edit the `affectiva_emotion_detector_photo.html` to change the
+output file name, toggle verbosity of logs, or use different detectors (e.g., small or large face).
+
+
+# Directions for processing video using affectiva_emotion_detector.html
 1. Open the `affectiva_emotion_detector.html` in your favorite text editor (e.g. Atom, Sublime) and replace the filename at `var filename = 'data/sample_vid.mp4';` with the name of your
 video filename. It's easies if you have the videos in the `affectiva-api-app` directory.
 
