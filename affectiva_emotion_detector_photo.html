@@ -18,7 +18,11 @@ the Affectiva javascript API.
 When finished processing, your browser
 will download the data file automatically.
 <br><br>
-<input type="file" id="input" multiple onchange="loadFile(this.files)">
+An upload button will appear here after the detector has been intialized.<br>
+You can upload an image or multiple images to process at the same time.<br>
+Results will be automatically downloaded as output.json.<br>
+<input type="file" id="input" accept="image/*"  multiple onchange="loadFile(this.files)" style="visibility: hidden;">
+<br><br>
 <div>
   <strong>DETECTOR LOG MSGS</strong>
 </div>
@@ -34,18 +38,18 @@ will download the data file automatically.
   referenced as data/sample_vid.mp4
   */
   // filename ends in json
-  var filename = 'ck_photos.json';
+  var filename = 'output.json';
+  // set fileList as global var
   var fileList;
+  // set file as global var
   var file;
   // sec determines where in the image files you would like to begin detection
   var secs = 0;
 
   // sec_step determines the step size of extracting emotions in seconds
   var sec_step = 1;
-
-  // stop_sec determines if you want to stop extraction at certain point of video
-  // comment this portion out if you want to run it for entire video.
-  // var stop_sec = 13;
+  // determines how long the file list is
+  var duration;
 
   // Set verbose = true to print images and detection succes, false if you don't want info
   var verbose = false;
@@ -70,24 +74,14 @@ will download the data file automatically.
     stop_sec = Infinity
   }
 
-  // // Get video duration and set as global variable;
-  // var me = this, video = document.createElement('video');
-  // video.src = filename;
-  var duration;
-  // // print success message when duration of video is loaded.
-  // video.onloadedmetadata = function() {
-  //   duration = this.duration;
-  //   log("#logs","Duration has been loaded for file: " + video.src )
-  // };
-
   // Initialize detector
   log("#logs","Initializing detector...");
   detector.start();
 
-  //Add a callback to notify when the detector is initialized and ready for runing.
+  //Add a callback to notify when the detector is initialized and ready for running.
   detector.addEventListener("onInitializeSuccess", function() {
     log("#logs","The detector reports initialized");
-    // loadFile(secs);
+    $("#input").css("visibility", "visible");
   });
 
 //Load the selected image
@@ -95,7 +89,6 @@ function loadFile(event) {
     $('#results').html("");
     fileList = document.getElementById('input').files // Load list of files.
     duration = fileList.length;
-    console.log(duration)
     getNextImage(secs)
   };
 
@@ -136,6 +129,7 @@ detector.addEventListener("onImageResultsSuccess", function(faces, image, timest
   console.log('#results', "Number of faces found: " + faces.length);
   if (verbose) {
   log("#logs","Number of faces found: " + faces.length);
+  log("#logs","Image processed: " + file.name);
   }
   if (faces.length > 0) {
     clicks += 1;
